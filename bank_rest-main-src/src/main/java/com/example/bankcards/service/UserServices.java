@@ -1,6 +1,7 @@
 package com.example.bankcards.service;
 
-public interface CardServices {
+
+public interface UserServices {
 
 
 }

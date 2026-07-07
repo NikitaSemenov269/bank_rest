@@ -33,15 +33,17 @@ public class Card {
     @Enumerated(EnumType.STRING)
     @Column(name = "card_status", nullable = false)
     @Builder.Default
-    private CardStatus role = CardStatus.ACTIVE;
+    private CardStatus status = CardStatus.ACTIVE;
 
     @Column(name = "balance", nullable = false)
     @Builder.Default
     private BigDecimal balance = BigDecimal.ZERO;
 
-//  +/-  Номер карты (зашифрован, отображается маской: **** **** **** 1234)
-//   + Владелец
-//   + Срок действия
-//  +  Статус: Активна, Заблокирована, Истек срок
-//  +  Баланс
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
+
+  /*  public String getMaskedCardNumber() {
+        return "****-****-****-" + cardNumberLast4;
+    }*/
 }
