@@ -1,5 +1,6 @@
-package com.example.bankcards.entity;
+package com.example.bankcards.entity.models;
 
+import com.example.bankcards.entity.enums.Role;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -31,7 +32,7 @@ public class User {
     @Builder.Default
     private Role role = Role.ROLE_USER;
 
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "user", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @Builder.Default
     private Set<Card> cardsOfUser = new HashSet<>();
 }

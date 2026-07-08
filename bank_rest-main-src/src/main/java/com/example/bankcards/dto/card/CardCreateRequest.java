@@ -1,4 +1,4 @@
-package com.example.bankcards.dto;
+package com.example.bankcards.dto.card;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -11,6 +11,7 @@ import static com.example.bankcards.util.ValidationMessages.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+// Только администратор.
 public class CardCreateRequest {
     @NotBlank(message = CARD_NUMBER_NOT_BLANK)
     @Pattern(regexp = "\\d{16,19}",
@@ -26,6 +27,7 @@ public class CardCreateRequest {
     @Pattern(regexp = "\\d{2}\\.\\d{2}\\.\\d{4}",
             message = VALIDITY_PERIOD_PATTERN)
     private String validityPeriod;
+
  /* Добавляется в слое сервиса
    // Добавляем в сервисном слое на основе:
     // 1. запрос пользователя - берем данные из сессии,

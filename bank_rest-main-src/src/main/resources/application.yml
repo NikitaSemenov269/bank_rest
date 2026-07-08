@@ -9,5 +9,10 @@
 
 
 app:
+  jwt:
+    access-token-secret: ${JWT_ACCESS_SECRET:mySecretAccessKeyForJWT123!}
+    refresh-token-secret: ${JWT_REFRESH_SECRET:mySecretRefreshKeyForJWT789!}
+    access-token-expiration: 10m
+    refresh-token-expiration: 1h
   card-encryption:
     key: ${CARD_ENCRYPTION_KEY:trainingSecretKey}

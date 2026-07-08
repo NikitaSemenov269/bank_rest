@@ -12,7 +12,7 @@ public class CardEncryptorAndDecrypt {
 
     private final String secretKey;
 
-    public CardEncryptorAndDecrypt(@Value("${app.card-encryption.key") String secretKey) {
+    public CardEncryptorAndDecrypt(@Value("${app.card-encryption.key}") String secretKey) {
         this.secretKey = secretKey;
     }
 

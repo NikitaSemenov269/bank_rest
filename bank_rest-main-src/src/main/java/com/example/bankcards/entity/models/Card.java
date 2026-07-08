@@ -1,5 +1,6 @@
-package com.example.bankcards.entity;
+package com.example.bankcards.entity.models;
 
+import com.example.bankcards.entity.enums.CardStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
@@ -21,8 +22,8 @@ public class Card {
     @Column(name = "card_number_encrypted", nullable = false)
     private String cardNumberEncrypted;
 
-    @Column(name = "card_number_last4", nullable = false, length = 4)
-    private String cardNumberLast4;
+    @Column(name = "masked_card_number", nullable = false, length = 4)
+    private String maskedCardNumber;
 
     @Column(name = "cardholder_name", nullable = false)
     private String cardholderName;

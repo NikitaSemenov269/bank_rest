@@ -1,6 +1,6 @@
-package com.example.bankcards.dto;
+package com.example.bankcards.dto.user;
 
-import com.example.bankcards.entity.Role;
+import com.example.bankcards.entity.enums.Role;
 import lombok.*;
 
 import java.util.UUID;

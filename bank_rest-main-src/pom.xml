@@ -24,7 +24,7 @@
         <java.version>21</java.version>
         <springdoc-openapi-starter.version>2.6.0</springdoc-openapi-starter.version>
         <protobuf.version>3.23.4</protobuf.version>
-        <jjwt.version>0.12.5</jjwt.version> <!-- Современный JWT -->
+        <jjwt.version>0.12.5</jjwt.version> <!-- JWT -->
         <lombok.version>1.18.30</lombok.version>
         <protobuf-plugin.version>2.4.0</protobuf-plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

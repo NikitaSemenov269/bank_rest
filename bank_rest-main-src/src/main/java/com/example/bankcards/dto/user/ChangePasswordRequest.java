@@ -1,4 +1,4 @@
-package com.example.bankcards.dto;
+package com.example.bankcards.dto.user;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -11,7 +11,7 @@ import static com.example.bankcards.util.ValidationMessages.PASSWORD_PATTERN;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class UpdatePassword {
+public class ChangePasswordRequest {
     @NotBlank(message = "Старый пароль обязательное поле.")
     @Pattern(regexp = "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=!]).{8,50}$",
             message = PASSWORD_PATTERN)

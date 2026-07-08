@@ -1,6 +1,6 @@
-package com.example.bankcards.dto;
+package com.example.bankcards.dto.card;
 
-import com.example.bankcards.entity.CardStatus;
+import com.example.bankcards.entity.enums.CardStatus;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -15,8 +15,8 @@ public class CardResponse {
     private UUID id;
     private String cardholderName;
     private String validityPeriod;
-    private CardStatus cardStatus;
-    private BigDecimal balance;   // Только для владельца.
     private String maskedCardNumber;
     private String fullCardNumber;  // Только для владельца.
+    private BigDecimal balance;   // Только для владельца.
+    private CardStatus cardStatus;
 }
