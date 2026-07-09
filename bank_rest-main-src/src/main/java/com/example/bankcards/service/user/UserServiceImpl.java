@@ -1,7 +1,6 @@
 package com.example.bankcards.service.user;
 
-import com.example.bankcards.dto.user.UserCreateRequest;
-import com.example.bankcards.dto.user.UserResponse;
+import com.example.bankcards.dto.user.*;
 import com.example.bankcards.entity.enums.Role;
 import com.example.bankcards.entity.models.User;
 import com.example.bankcards.exception.ConflictException;
@@ -10,11 +9,14 @@ import com.example.bankcards.mappers.UserMapper;
 import com.example.bankcards.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
+
+import static com.example.bankcards.util.SecurityUtils.getCurrentUserId;
 
 @Slf4j
 @Service
@@ -28,8 +30,9 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserResponse createNewUser(UserCreateRequest newUser) {
-        if (repository.existsByName(newUser.getName())) {
-            throw new ConflictException("Пользователь с именем '" + newUser.getName() + "' уже существует");
+        log.info("Попытка создания нового пользователя.");
+        if (repository.existsByLogin(newUser.getLogin())) {
+            throw new ConflictException("Пользователь с логином '" + newUser.getLogin() + "' уже существует");
         }
 
         String hashedPassword = passwordEncoder.encode(newUser.getPassword());
@@ -38,53 +41,135 @@ public class UserServiceImpl implements UserService {
         user.setPasswordHash(hashedPassword);
 
         repository.save(user);
+        log.info("Пользователь успешно создан.");
+        // Доп. шаг для возможности проверить корректность сохранения email.
+        UserResponse userResponse = mapper.toDto(user);
+        userResponse.setEmail(user.getEmail());
+        return userResponse;
+    }
+
+    // Спорное место
+    @Override
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional
+    public UserResponse updateUser(UUID id, UserUpdateRequest updateRequest) {
+        log.info("Попытка обновления данных пользователя с id: {}", id);
+        User user = repository.findById(id).orElseThrow(
+                () -> new NotFoundException("Пользователь не найден.")
+        );
+
+        if (!user.getName().equals(updateRequest.getName())) {
+            user.setName(updateRequest.getName());
+            log.info("Имя пользователя успешно обновлено.");
+        }
+        if (!user.getEmail().equals(updateRequest.getEmail())) {
+            user.setEmail(updateRequest.getEmail());
+            log.info("Почта пользователя успешно обновлена.");
+        }
         return mapper.toDto(user);
     }
 
-    // Только для админов:
-    // (пока закомментировано)
-
+    @Override
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public void deleteUser(UUID id) {
-        // пока пусто
+        log.info("Попытка удаления пользователя с id: {}", id);
+        existsById(id);
+        repository.deleteById(id);
+        log.info("Пользователь успешно удален.");
     }
 
-    // Только для пользователей
     @Override
     @Transactional
-    public void changePassword(UUID id, String oldPassword, String newPassword) {
-        User user = repository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Пользователь не найден"));
-        checkPassword(oldPassword, user.getPasswordHash());
-        user.setPasswordHash(passwordEncoder.encode(newPassword));
-        repository.save(user);
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public void changeLogin(ChangeLoginRequest changeLoginRequest) {
+        if (repository.existsByLogin(changeLoginRequest.getNewLogin())) {
+            throw new ConflictException("Логин '" + changeLoginRequest.getNewLogin() + "' уже занят.");
+        }
+
+        User user = repository.findById(getCurrentUserId()).orElseThrow(
+                () -> new NotFoundException("Пользователь не найден"));
+
+        user.setLogin(changeLoginRequest.getNewLogin());
+    }
+
+    @Override
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @Transactional
+    public void changePassword(ChangePasswordRequest changePasswordRequest) {
+        User user = repository.findById(getCurrentUserId()).orElseThrow(
+                () -> new NotFoundException("Пользователь не найден"));
+
+        if (!passwordEncoder.matches(changePasswordRequest.getOldPassword(), user.getPasswordHash())) {
+            throw new NotFoundException("Неверный старый пароль.");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(changePasswordRequest.getNewPassword()));
+    }
+
+    @Override
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional
+    public void changeRole(UUID id) {
+        User user = repository.findById(id).orElseThrow(
+                () -> new NotFoundException("Пользователь не найден"));
+
+        if (user.getRole().equals(Role.ROLE_ADMIN)) {
+            log.info("Пользователь уже является администратором.");
+            return;
+        }
+        user.setRole(Role.ROLE_ADMIN);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public UserResponse findByName(String name) {
-        return repository.findByName(name)
-                .orElseThrow(() -> new NotFoundException("Пользователь с именем " + name + " не найден."));
+    public void checkPassword(String oldPassword, UUID userId) {
+        String encodedPassword = repository.findPasswordHashById(userId)
+                .orElseThrow(() -> new NotFoundException("Пользователь не найден."));
+        if (!passwordEncoder.matches(oldPassword, encodedPassword)) {
+            throw new NotFoundException("Неверный пароль.");
+        }
     }
 
     @Override
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @Transactional(readOnly = true)
+    public void existsById(UUID id) {
+        if (!repository.existsById(id)) {
+            throw new NotFoundException("Пользователь не найден.");
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserResponse findByLogin(String login) {
+        return mapper.toDto(repository.findByLogin(login).orElseThrow(
+                () -> new NotFoundException("Пользователь не найден.")
+        ));
+    }
+
+    @Override
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional(readOnly = true)
+    public User findByLoginAsAdmin(String login) {
+        return repository.findByLoginAsAdmin(login).orElseThrow(
+                () -> new NotFoundException("Пользователь не найден.")
+        );
+    }
+
+    @Override
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @Transactional(readOnly = true)
+    public UserResponse findByEmail(String email) {
+        return mapper.toDtoWithEmail(repository.findByEmail(email)
+                .orElseThrow(() -> new NotFoundException("Пользователь не найден.")));
+    }
+
+    @Override
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     @Transactional(readOnly = true)
     public Role findRoleById(UUID userId) {
         return repository.findRoleById(userId)
                 .orElseThrow(() -> new NotFoundException("Пользователь с id: " + userId + " не найден."));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public void checkPassword(String rawPassword, UUID userId) {
-        String encodedPassword = repository.findPasswordHashById(userId)
-                .orElseThrow(() -> new NotFoundException("Пользователь с id: " + userId + " не найден."));
-        checkPassword(rawPassword, encodedPassword);
-    }
-
-    private void checkPassword(String rawPassword, String encodedPassword) {
-        if (!passwordEncoder.matches(rawPassword, encodedPassword)) {
-            throw new NotFoundException("Неверный пароль.");
-        }
     }
 }

@@ -17,4 +17,6 @@ public class ValidationMessages {
                     " одну заглавную букву и один спецсимвол.";
     public static final String VALIDITY_PERIOD_PATTERN =
             "Требуемый формат: ДД.ММ.ГГГГ (например, 01.01.2030).";
+
+    public static final String LOGIN_PATTERN = "Логин может содержать буквы, цифры и символы @#$%^&+=!_-";
 }

@@ -6,16 +6,12 @@ import com.example.bankcards.entity.models.User;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-import java.util.List;
-
 @Mapper(componentModel = "spring")
 public interface UserMapper {
-
-    @Mapping(target = "passwordHash", ignore = true)
+    @Mapping(target = "email", ignore = true)
     UserResponse toDto(User user);
 
-    User toEntity(UserCreateRequest newUser);
+    UserResponse toDtoWithEmail(User user);
 
-    @Mapping(target = "passwordHash", ignore = true)
-    List<UserResponse> toListDto(List<User> users);
+    User toEntity(UserCreateRequest newUser);
 }

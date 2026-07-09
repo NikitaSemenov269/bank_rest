@@ -13,5 +13,6 @@ import java.util.UUID;
 public class UserResponse {
     private UUID id;
     private String name;
+    private String email; // чувствительные данные.
     private Role role = Role.ROLE_USER;
 }

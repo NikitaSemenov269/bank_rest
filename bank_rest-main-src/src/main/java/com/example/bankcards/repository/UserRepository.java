@@ -1,6 +1,5 @@
 package com.example.bankcards.repository;
 
-import com.example.bankcards.dto.user.UserResponse;
 import com.example.bankcards.entity.enums.Role;
 import com.example.bankcards.entity.models.User;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,9 +10,15 @@ import java.util.UUID;
 
 public interface UserRepository extends JpaRepository<User, UUID> {
 
-    boolean existsByName(String name);
+    boolean existsByEmail(String email);
 
-    Optional<UserResponse> findByName(String name);
+    boolean existsByLogin(String login);
+
+    Optional<User> findByEmail(String email);
+
+    Optional<User> findByLogin(String login);
+
+    Optional<User> findByLoginAsAdmin(String login);
 
     @Query("SELECT u.role FROM User u WHERE u.id = :userId")
     Optional<Role> findRoleById(UUID userId);

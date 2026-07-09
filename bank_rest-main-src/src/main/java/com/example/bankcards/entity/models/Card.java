@@ -22,8 +22,8 @@ public class Card {
     @Column(name = "card_number_encrypted", nullable = false)
     private String cardNumberEncrypted;
 
-    @Column(name = "masked_card_number", nullable = false, length = 4)
-    private String maskedCardNumber;
+    @Column(name = "card_number_last4", nullable = false, length = 4)
+    private String cardNumberLast4;
 
     @Column(name = "cardholder_name", nullable = false)
     private String cardholderName;
@@ -43,8 +43,4 @@ public class Card {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
-
-  /*  public String getMaskedCardNumber() {
-        return "****-****-****-" + cardNumberLast4;
-    }*/
 }

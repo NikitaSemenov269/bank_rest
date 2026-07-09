@@ -27,10 +27,4 @@ public class CardCreateRequest {
     @Pattern(regexp = "\\d{2}\\.\\d{2}\\.\\d{4}",
             message = VALIDITY_PERIOD_PATTERN)
     private String validityPeriod;
-
- /* Добавляется в слое сервиса
-   // Добавляем в сервисном слое на основе:
-    // 1. запрос пользователя - берем данные из сессии,
-    // 2. добавляет админ.
-    private UUID userId;*/
 }

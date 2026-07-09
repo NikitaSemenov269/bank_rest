@@ -10,6 +10,7 @@ import com.example.bankcards.security.JwtTokenProvider;
 import com.example.bankcards.service.user.UserService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -29,7 +30,7 @@ public class AuthService {
     }
 
     public TokenResponse login(LoginRequest request) {
-        UserResponse user = service.findByName(request.getName());
+        UserResponse user = service.findByLogin(request.getLogin());
         service.checkPassword(request.getPassword(), user.getId());
         return buildTokenResponse(user.getId(), user.getRole());
     }
