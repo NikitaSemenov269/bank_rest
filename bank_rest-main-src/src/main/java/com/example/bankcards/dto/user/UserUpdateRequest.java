@@ -1,11 +1,8 @@
 package com.example.bankcards.dto.user;
 
 import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import lombok.*;
-
-import java.util.UUID;
 
 import static com.example.bankcards.util.ValidationMessages.CARDHOLDER_NAME_PATTERN;
 

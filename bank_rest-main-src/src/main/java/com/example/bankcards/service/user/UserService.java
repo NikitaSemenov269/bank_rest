@@ -17,11 +17,11 @@ public interface UserService {
 
     void changeRole(UUID id);
 
-    void existsById(UUID id);
-
     UserResponse findByEmail(String email);
 
     Role findRoleById(UUID userId);
+
+    UserResponse findById(UUID id);
 
     UserResponse findByLogin(String login);
 

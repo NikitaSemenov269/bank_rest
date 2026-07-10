@@ -10,7 +10,6 @@ import com.example.bankcards.security.JwtTokenProvider;
 import com.example.bankcards.service.user.UserService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 

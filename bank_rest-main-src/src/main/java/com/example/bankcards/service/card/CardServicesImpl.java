@@ -6,16 +6,14 @@ import com.example.bankcards.dto.card.CardUpdateRequest;
 import com.example.bankcards.entity.enums.CardStatus;
 import com.example.bankcards.entity.models.Card;
 import com.example.bankcards.entity.models.User;
-import com.example.bankcards.exception.CardExpiredException;
-import com.example.bankcards.exception.ConflictException;
-import com.example.bankcards.exception.InsufficientFundsException;
-import com.example.bankcards.exception.NotFoundException;
+import com.example.bankcards.exception.*;
 import com.example.bankcards.mappers.CardMapper;
 import com.example.bankcards.repository.CardRepository;
 import com.example.bankcards.service.user.UserService;
 import com.example.bankcards.util.CardEncryptorAndDecrypt;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -25,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
@@ -34,15 +32,16 @@ import static com.example.bankcards.util.SecurityUtils.getCurrentUserId;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class CardServicesImpl implements CardServices {
+public class CardServicesImpl implements CardService {
 
     private final CardEncryptorAndDecrypt cardEncryptor;
     private final UserService userService;
     private final CardRepository repository;
     private final CardMapper mapper;
 
-    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("MM.yyyy");
 
+    @Override
     @Transactional
     @PreAuthorize("hasRole('ADMIN')")
     public CardResponse createNewCard(String login, CardCreateRequest cardCreateRequest) {
@@ -62,7 +61,7 @@ public class CardServicesImpl implements CardServices {
         card.setCardNumberLast4(cardNumber.substring(cardNumber.length() - 4));
 
         if (!user.getCardsOfUser().add(card)) {
-            throw new ConflictException("Карта уже существует.");
+            throw new DataIntegrityViolationException("Карта уже существует.");
         }
         card.setUser(user);
         log.info("Карта успешно добавлена.");
@@ -70,6 +69,7 @@ public class CardServicesImpl implements CardServices {
         return mapper.toDto(card);
     }
 
+    @Override
     @Transactional
     @PreAuthorize("hasRole('ADMIN')")
     public CardResponse updateCard(UUID idCard, CardUpdateRequest cardUpdateRequest) {
@@ -79,26 +79,17 @@ public class CardServicesImpl implements CardServices {
                 () -> new NotFoundException("Карта не найдена.")
         );
 
-        if (!card.getStatus().equals(CardStatus.ACTIVE)) {
-            throw new ConflictException("Статус карты не соответствует ожидаемому. " +
-                    "Статус: " + card.getStatus());
-        }
         if (!card.getCardholderName().equals(cardUpdateRequest.getCardholderName())) {
             card.setCardholderName(cardUpdateRequest.getCardholderName());
         }
 
         if (!card.getValidityPeriod().equals(cardUpdateRequest.getValidityPeriod())) {
-            try {
-                validateValidityPeriod(cardUpdateRequest.getValidityPeriod());
-                card.setValidityPeriod(cardUpdateRequest.getValidityPeriod());
-            } catch (CardExpiredException e) {
-                setStatusCard(idCard, CardStatus.EXPIRED);
-                throw e;
-            }
+            card.setValidityPeriod(cardUpdateRequest.getValidityPeriod());
         }
         return mapper.toDto(card);
     }
 
+    @Override
     @Transactional
     @PreAuthorize("hasRole('ADMIN')")
     public void deleteCard(UUID id) {
@@ -112,9 +103,10 @@ public class CardServicesImpl implements CardServices {
         repository.delete(card);
     }
 
+    @Override
     @Transactional(readOnly = true)
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
-    public Page<CardResponse> findAllCardsOfUser(Pageable pageable) {
+    public Page<CardResponse> getAllCardsOfUser(Pageable pageable) {
         return repository.findAllByUserId(getCurrentUserId(), pageable)
                 .map(card -> {
                     CardResponse response = mapper.toDtoForOwner(card);
@@ -126,26 +118,51 @@ public class CardServicesImpl implements CardServices {
     @Override
     @Transactional(readOnly = true)
     @PreAuthorize("hasRole('ADMIN')")
-    public Page<CardResponse> findAllCards(Pageable pageable) {
+    public Page<CardResponse> getAllCards(Pageable pageable) {
         return repository.findAll(pageable)
                 .map(mapper::toDto);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    @PreAuthorize("hasRole('ADMIN')")
+    public Page<CardResponse> getAllCardsByStatus(CardStatus status, Pageable pageable) {
+        return repository.findAllByCardStatus(status, pageable)
+                .map(mapper::toDto);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
-    public BigDecimal showBalanceOfCard(UUID id) {
-        Card card = repository.findByUserIdAndCardId(getCurrentUserId(), id).orElseThrow(
-                () -> new NotFoundException("Карта не найдена.")
-        );
+    public BigDecimal getCardBalance(UUID id) {
+        Card card = repository.findByUserIdAndCardId(getCurrentUserId(), id)
+                .orElseThrow(() -> new NotFoundException("Карта не найдена."));
+
+        if (card.getStatus() != CardStatus.ACTIVE) {
+            log.info("Карта не активна! Обратитесь к администратору.");
+            throw new ConflictException("Карта не активна. Статус: " + card.getStatus());
+        }
+
+        checkExpiryAndMark(card.getId(), card.getValidityPeriod());
         return card.getBalance();
     }
 
     // Обработать исключение в хандлере
+    @Override
     @Transactional
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
-    public void transferBetweenCardsOfUser(UUID receivingCardID, UUID givingCardID, BigDecimal amount) {
+    public void transferBetweenCards(UUID receivingCardID, UUID givingCardID, BigDecimal amount) {
+
         if (receivingCardID.equals(givingCardID)) {
             throw new ConflictException("Нельзя произвести перевод на ту же карту.");
+        }
+
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new InvalidAmountException("Сумма перевода должна быть положительной.");
+        }
+
+        if (amount.compareTo(new BigDecimal("50.00")) < 0) {
+            throw new InvalidAmountException("Минимальная сумма перевода: 50.00");
         }
 
         Card receivingCard = repository.findByUserIdAndCardId(getCurrentUserId(), receivingCardID).orElseThrow(
@@ -159,44 +176,95 @@ public class CardServicesImpl implements CardServices {
                     + " givingCard: " + givingCard.getStatus());
         }
 
-        try {
-            validateValidityPeriod(receivingCard.getValidityPeriod());
-        } catch (CardExpiredException e) {
-            setStatusCard(receivingCard.getId(), CardStatus.EXPIRED);
-            throw e;
-        }
+        checkExpiryAndMark(receivingCard.getId(), receivingCard.getValidityPeriod());
+        checkExpiryAndMark(givingCard.getId(), givingCard.getValidityPeriod());
 
-        try {
-            validateValidityPeriod(givingCard.getValidityPeriod());
-        } catch (CardExpiredException e) {
-            setStatusCard(givingCard.getId(), CardStatus.EXPIRED);
-            throw e;
-        }
-        BigDecimal givingCardBalance = givingCard.getBalance().setScale(3, RoundingMode.HALF_UP);
+        BigDecimal givingCardBalance = givingCard.getBalance().setScale(2, RoundingMode.HALF_UP);
 
         if (givingCardBalance.compareTo(amount) < 0) {
             throw new InsufficientFundsException("Недостаточно средств для совершения операции.");
         }
 
-        BigDecimal receivingCardBalance = receivingCard.getBalance().setScale(3, RoundingMode.HALF_UP);
-        amount = amount.setScale(3, RoundingMode.HALF_UP);
+        BigDecimal receivingCardBalance = receivingCard.getBalance().setScale(2, RoundingMode.HALF_UP);
 
         receivingCard.setBalance(receivingCardBalance.add(amount));
         givingCard.setBalance(givingCardBalance.subtract(amount));
     }
 
+    @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     @PreAuthorize("hasRole('ADMIN')")
     public void setStatusCard(UUID id, CardStatus status) {
         Card card = repository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Карта не найдена"));
+
+        if (card.getStatus().equals(status)) {
+            return;
+        }
+        if (status.equals(CardStatus.ACTIVE) && card.getStatus().equals(CardStatus.EXPIRED)) {
+            throw new ConflictException("Нельзя активировать карту с истекшим сроком действия.");
+        }
+        if (status.equals(CardStatus.ACTIVE)) {
+            checkExpiryAndMark(id, card.getValidityPeriod());
+        }
         card.setStatus(status);
     }
 
+    @Override
+    @Transactional
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public void requestBlockCard(UUID cardId) {
+        Card card = repository.findByUserIdAndCardId(getCurrentUserId(), cardId)
+                .orElseThrow(() -> new NotFoundException("Карта не найдена."));
+
+        if (card.getStatus() != CardStatus.ACTIVE) {
+            throw new ConflictException("Карта не активна. Статус: " + card.getStatus());
+        }
+
+        card.setStatus(CardStatus.PENDING_BLOCK);
+    }
+
+    @Override
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN')")
+    public void approveBlockCard(UUID cardId) {
+        Card card = repository.findById(cardId)
+                .orElseThrow(() -> new NotFoundException("Карта не найдена."));
+
+        if (card.getStatus() != CardStatus.PENDING_BLOCK) {
+            throw new ConflictException("Карта не в статусе ожидания блокировки.");
+        }
+
+        card.setStatus(CardStatus.BLOCKED);
+    }
+
+    @Override
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN')")
+    public void rejectBlockCard(UUID cardId) {
+        Card card = repository.findById(cardId)
+                .orElseThrow(() -> new NotFoundException("Карта не найдена."));
+
+        if (card.getStatus() != CardStatus.PENDING_BLOCK) {
+            throw new ConflictException("Карта не в статусе ожидания блокировки.");
+        }
+
+        card.setStatus(CardStatus.ACTIVE);
+    }
+
     private void validateValidityPeriod(String validityPeriod) {
-        LocalDate period = LocalDate.parse(validityPeriod, FORMATTER);
-        if (period.isBefore(LocalDate.now())) {
+        YearMonth period = YearMonth.parse(validityPeriod, FORMATTER);
+        if (period.isBefore(YearMonth.now())) {
             throw new CardExpiredException("Срок действия карты уже истёк.");
+        }
+    }
+
+    private void checkExpiryAndMark(UUID id, String period) {
+        try {
+            validateValidityPeriod(period);
+        } catch (CardExpiredException e) {
+            setStatusCard(id, CardStatus.EXPIRED);
+            throw e;
         }
     }
 }

@@ -1,12 +1,11 @@
 package com.example.bankcards.dto.token;
 
-
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import lombok.*;
 
-import static com.example.bankcards.util.ValidationMessages.*;
+import static com.example.bankcards.util.ValidationMessages.LOGIN_PATTERN;
+import static com.example.bankcards.util.ValidationMessages.PASSWORD_PATTERN;
 
 @Getter
 @Setter

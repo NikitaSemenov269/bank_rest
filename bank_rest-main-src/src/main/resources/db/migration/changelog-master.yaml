@@ -1,0 +1,121 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: sns
+      changes:
+        - createTable:
+            tableName: users
+            columns:
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: login
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: email
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: password_hash
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: role
+                  type: VARCHAR(20)
+                  defaultValue: ROLE_USER
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 2
+      author: sns
+      changes:
+        - createTable:
+            tableName: cards
+            columns:
+              - column:
+                  name: card_id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: card_number_encrypted
+                  type: CLOB
+                  constraints:
+                    nullable: false
+              - column:
+                  name: card_number_last4
+                  type: VARCHAR(4)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: cardholder_name
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: validity_period
+                  type: VARCHAR(10)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: card_status
+                  type: VARCHAR(20)
+                  defaultValue: ACTIVE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: balance
+                  type: DECIMAL(15, 2)
+                  defaultValueNumeric: 0.00
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    foreignKeyName: fk_card_user
+                    references: users(user_id)
+                    deleteCascade: false
+
+  - changeSet:
+      id: 3
+      author: sns
+      changes:
+        - insert:
+            tableName: users
+            columns:
+              - column:
+                  name: user_id
+                  value: "a0000000-0000-0000-0000-000000000001"
+              - column:
+                  name: name
+                  value: "SuperAdmin"
+              - column:
+                  name: login
+                  value: "admin"
+              - column:
+                  name: email
+                  value: "admin@bank.ru"
+              - column:
+                  name: password_hash
+                  value: "$2a$10$tRq3rCDRamb.cUNK.1vePel0Wnuf5up3FguaGNwtPB/RpyxiJMgtO"
+              - column:
+                  name: role
+                  value: "ROLE_ADMIN"

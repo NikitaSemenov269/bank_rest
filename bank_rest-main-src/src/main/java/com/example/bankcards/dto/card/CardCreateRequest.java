@@ -24,7 +24,7 @@ public class CardCreateRequest {
     private String cardholderName;
 
     @NotBlank(message = "Период действия карты обязательное поле.")
-    @Pattern(regexp = "\\d{2}\\.\\d{2}\\.\\d{4}",
+    @Pattern(regexp = "\\d{2}\\.\\d{4}",
             message = VALIDITY_PERIOD_PATTERN)
     private String validityPeriod;
 }

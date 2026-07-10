@@ -2,7 +2,6 @@ package com.example.bankcards.exception;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.crossstore.ChangeSetPersister;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
@@ -16,7 +15,6 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Slf4j
 @RestControllerAdvice
@@ -24,36 +22,43 @@ public class ErrorHandler {
 
     static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    @ExceptionHandler
+    @ExceptionHandler(NotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    public ApiError handleNotFound(ChangeSetPersister.NotFoundException e) {
+    public ApiError handleNotFound(NotFoundException e) {
         log.error("404: {}", e.getMessage());
-        return buildError(e.getMessage(), "------------------------", HttpStatus.NOT_FOUND);
+        return buildError(e.getMessage(), "Объект не найден", HttpStatus.NOT_FOUND);
     }
 
-    @ExceptionHandler
+    @ExceptionHandler(ConflictException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
     public ApiError handleConflict(ConflictException e) {
         log.error("409: {}", e.getMessage());
-        return buildError(e.getMessage(), "------------------------", HttpStatus.CONFLICT);
+        return buildError(e.getMessage(), "Конфликт данных", HttpStatus.CONFLICT);
     }
 
-    @ExceptionHandler
+    @ExceptionHandler(DataIntegrityViolationException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
     public ApiError handleDataIntegrity(DataIntegrityViolationException e) {
-        log.error("409: Дубликат данных");
-        return buildError("------------------------",
-                "------------------------", HttpStatus.CONFLICT);
+        log.error("409: Нарушение целостности данных");
+        return buildError("Операция невозможна: нарушение уникальности данных",
+                "Нарушение целостности данных", HttpStatus.CONFLICT);
     }
 
-    @ExceptionHandler
+    @ExceptionHandler({CardExpiredException.class, InvalidAmountException.class, InsufficientFundsException.class})
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiError handleBadRequest(RuntimeException e) {
+        log.warn("400: {}", e.getMessage());
+        return buildError(e.getMessage(), "Некорректный запрос", HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiError handleValidation(MethodArgumentNotValidException e) {
         log.error("400: Ошибка валидации");
 
         List<String> errors = e.getBindingResult().getFieldErrors().stream()
                 .map(this::formatError)
-                .collect(Collectors.toList());
+                .toList();
 
         String message = errors.isEmpty() ? "Ошибка валидации" : errors.get(0);
 
@@ -66,7 +71,7 @@ public class ErrorHandler {
                 .build();
     }
 
-    @ExceptionHandler
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiError handleTypeMismatch(MethodArgumentTypeMismatchException e) {
         log.error("400: Неверный тип параметра");
@@ -78,9 +83,9 @@ public class ErrorHandler {
     @ExceptionHandler(AccessDeniedException.class)
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public ApiError handleAccessDenied(AccessDeniedException e) {
-        log.warn("403: Доступ запрещен");
+        log.warn("403: Доступ запрещён");
         return buildError("У вас нет прав для выполнения этой операции",
-                "Доступ запрещен", HttpStatus.FORBIDDEN);
+                "Доступ запрещён", HttpStatus.FORBIDDEN);
     }
 
     @ExceptionHandler(AuthenticationException.class)

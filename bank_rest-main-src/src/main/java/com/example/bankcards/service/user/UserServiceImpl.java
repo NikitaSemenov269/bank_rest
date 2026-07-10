@@ -48,7 +48,6 @@ public class UserServiceImpl implements UserService {
         return userResponse;
     }
 
-    // Спорное место
     @Override
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
@@ -74,8 +73,12 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void deleteUser(UUID id) {
         log.info("Попытка удаления пользователя с id: {}", id);
-        existsById(id);
-        repository.deleteById(id);
+        User user = repository.findById(id).orElseThrow(
+                () -> new NotFoundException("Пользователь не найден.")
+        );
+        user.getCardsOfUser().forEach(card -> card.setUser(null)); // Отвязка карт от конкретного пользователя.
+        user.getCardsOfUser().clear();
+        repository.delete(user);
         log.info("Пользователь успешно удален.");
     }
 
@@ -134,10 +137,9 @@ public class UserServiceImpl implements UserService {
     @Override
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     @Transactional(readOnly = true)
-    public void existsById(UUID id) {
-        if (!repository.existsById(id)) {
-            throw new NotFoundException("Пользователь не найден.");
-        }
+    public UserResponse findById(UUID id) {
+        return mapper.toDto(repository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Пользователь не найден.")));
     }
 
     @Override
@@ -171,5 +173,11 @@ public class UserServiceImpl implements UserService {
     public Role findRoleById(UUID userId) {
         return repository.findRoleById(userId)
                 .orElseThrow(() -> new NotFoundException("Пользователь с id: " + userId + " не найден."));
+    }
+
+    private void existsById(UUID id) {
+        if (!repository.existsById(id)) {
+            throw new NotFoundException("Пользователь не найден.");
+        }
     }
 }

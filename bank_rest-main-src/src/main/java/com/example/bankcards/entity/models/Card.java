@@ -3,6 +3,7 @@ package com.example.bankcards.entity.models;
 import com.example.bankcards.entity.enums.CardStatus;
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.math.BigDecimal;
 import java.util.UUID;
 
@@ -19,6 +20,7 @@ public class Card {
     @Column(name = "card_id", updatable = false, nullable = false)
     private UUID id;
 
+    @Lob
     @Column(name = "card_number_encrypted", nullable = false)
     private String cardNumberEncrypted;
 
