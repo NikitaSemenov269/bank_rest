@@ -6,6 +6,7 @@
       <list>
         <option value="$PROJECT_DIR$/bank_rest-main-src/src/main/java/pom.xml" />
         <option value="$PROJECT_DIR$/bank_rest-main-src/pom.xml" />
+        <option value="$PROJECT_DIR$/bank_rest/pom.xml" />
       </list>
     </option>
   </component>

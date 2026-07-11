@@ -1,0 +1,31 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/bankcards
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  liquibase:
+    enabled: true
+    change-log: classpath:db/migration/changelog-master.yaml
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+app:
+  jwt:
+    access-token-secret: ${JWT_ACCESS_SECRET:mySuperSecretAccessKeyForJWT123!!}
+    refresh-token-secret: ${JWT_REFRESH_SECRET:mySuperSecretRefreshKeyForJWT789!!}
+    access-token-expiration: 10m
+    refresh-token-expiration: 1h
+  card-encryption:
+    key: ${CARD_ENCRYPTION_KEY:trainingKey12345}

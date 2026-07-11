@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: bankcards-db
+    environment:
+      POSTGRES_DB: bankcards
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: bankcards-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/bankcards
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      JWT_ACCESS_SECRET: mySuperSecretAccessKeyForJWT123!!
+      JWT_REFRESH_SECRET: mySuperSecretRefreshKeyForJWT789!!
+      CARD_ENCRYPTION_KEY: trainingKey12345
+    ports:
+      - "8080:8080"
+
+volumes:
+  pgdata:
