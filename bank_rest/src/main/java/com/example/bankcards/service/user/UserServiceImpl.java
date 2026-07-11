@@ -174,7 +174,6 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     @Transactional(readOnly = true)
     public Role findRoleById(UUID userId) {
         return repository.findRoleById(userId)
